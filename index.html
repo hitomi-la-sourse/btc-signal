@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="BTC Signal">
+  <meta name="theme-color" content="#0d1117">
+  <title>BTC Signal Monitor</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+      --cyan: #58a6ff;
+      --accent: #1f6feb;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100dvh;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+    header .sub { font-size: 11px; color: var(--muted); }
+
+    .refresh-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .refresh-btn:active { opacity: 0.7; }
+    .refresh-btn svg { width: 14px; height: 14px; }
+
+    main { padding: 12px 12px 24px; display: flex; flex-direction: column; gap: 10px; max-width: 480px; margin: 0 auto; }
+
+    /* 価格カード */
+    .price-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 18px;
+    }
+    .price-card .label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    .price-card .price { font-size: 36px; font-weight: 800; letter-spacing: -1px; color: var(--cyan); }
+    .price-card .change { font-size: 14px; font-weight: 600; margin-top: 4px; }
+    .price-card .stats { display: flex; gap: 16px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+    .price-card .stats span { display: flex; flex-direction: column; gap: 1px; }
+    .price-card .stats b { color: var(--text); font-size: 13px; }
+
+    /* 総合シグナル */
+    .overall-card {
+      border-radius: 14px;
+      padding: 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .overall-card.BUY  { background: rgba(63,185,80,0.15); border: 2px solid var(--green); }
+    .overall-card.SELL { background: rgba(248,81,73,0.15); border: 2px solid var(--red); }
+    .overall-card.NEUTRAL { background: rgba(210,153,34,0.12); border: 2px solid var(--yellow); }
+
+    .overall-card .icon { font-size: 40px; line-height: 1; }
+    .overall-card .text .title { font-size: 26px; font-weight: 900; letter-spacing: -0.5px; }
+    .overall-card .text .detail { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .overall-card.BUY  .text .title { color: var(--green); }
+    .overall-card.SELL .text .title { color: var(--red); }
+    .overall-card.NEUTRAL .text .title { color: var(--yellow); }
+
+    /* インジケーターカード */
+    .section-title { font-size: 13px; font-weight: 600; color: var(--muted); padding: 4px 2px 2px; }
+
+    .indicator-grid { display: flex; flex-direction: column; gap: 8px; }
+
+    .indicator-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .indicator-card .left { flex: 1; min-width: 0; }
+    .indicator-card .name { font-size: 13px; font-weight: 600; }
+    .indicator-card .value { font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .indicator-card .detail { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+
+    .badge {
+      flex-shrink: 0;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.3px;
+    }
+    .badge.BUY  { background: rgba(63,185,80,0.2); color: var(--green); border: 1px solid var(--green); }
+    .badge.SELL { background: rgba(248,81,73,0.2); color: var(--red); border: 1px solid var(--red); }
+    .badge.NEUTRAL { background: rgba(210,153,34,0.15); color: var(--yellow); border: 1px solid var(--yellow); }
+
+    /* 間隔セレクター */
+    .interval-selector {
+      display: flex;
+      gap: 8px;
+    }
+    .interval-btn {
+      flex: 1;
+      background: var(--card);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 0;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+    }
+    .interval-btn.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    /* ローディング */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      gap: 16px;
+      color: var(--muted);
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* エラー */
+    .error-card {
+      background: rgba(248,81,73,0.1);
+      border: 1px solid var(--red);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--red);
+    }
+
+    /* フッター */
+    .footer { text-align: center; font-size: 11px; color: var(--muted); padding-top: 4px; }
+
+    /* アニメーション */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .animate { animation: fadeIn 0.3s ease; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>₿ BTC Signal</h1>
+      <div class="sub" id="last-update">読み込み中...</div>
+    </div>
+    <button class="refresh-btn" onclick="loadData()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M1 4v6h6"/><path d="M23 20v-6h-6"/>
+        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/>
+      </svg>
+      更新
+    </button>
+  </header>
+
+  <main id="app">
+    <div class="loading"><div class="spinner"></div>データ取得中...</div>
+  </main>
+
+  <script>
+  // ─── 設定 ───────────────────────────────────
+  const SYMBOL = 'BTCUSDT';
+  const BASE = 'https://api.binance.com';
+  let currentInterval = '1h';
+  let refreshTimer = null;
+  const REFRESH_SEC = 30;
+
+  // ─── 指標計算 ────────────────────────────────
+
+  function calcEMA(data, period) {
+    const k = 2 / (period + 1);
+    const result = new Array(data.length).fill(null);
+    // 最初のEMAはSMA
+    let sum = 0;
+    for (let i = 0; i < period; i++) sum += data[i];
+    result[period - 1] = sum / period;
+    for (let i = period; i < data.length; i++) {
+      result[i] = data[i] * k + result[i - 1] * (1 - k);
+    }
+    return result;
+  }
+
+  function calcRSI(data, period = 14) {
+    if (data.length < period + 1) return [];
+    const result = new Array(data.length).fill(null);
+    let avgGain = 0, avgLoss = 0;
+    for (let i = 1; i <= period; i++) {
+      const d = data[i] - data[i - 1];
+      if (d > 0) avgGain += d; else avgLoss -= d;
+    }
+    avgGain /= period; avgLoss /= period;
+    result[period] = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
+    for (let i = period + 1; i < data.length; i++) {
+      const d = data[i] - data[i - 1];
+      avgGain = (avgGain * (period - 1) + (d > 0 ? d : 0)) / period;
+      avgLoss = (avgLoss * (period - 1) + (d < 0 ? -d : 0)) / period;
+      result[i] = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
+    }
+    return result;
+  }
+
+  function calcMACD(data, fast = 12, slow = 26, signal = 9) {
+    const emaFast = calcEMA(data, fast);
+    const emaSlow = calcEMA(data, slow);
+    const macdLine = data.map((_, i) =>
+      emaFast[i] !== null && emaSlow[i] !== null ? emaFast[i] - emaSlow[i] : null
+    );
+    const validMacd = macdLine.filter(v => v !== null);
+    const signalArr = new Array(macdLine.length).fill(null);
+    // signal line のEMAを macdLine の有効部分に対して計算
+    let startIdx = macdLine.findIndex(v => v !== null);
+    const macdValues = macdLine.slice(startIdx);
+    const sigValues = calcEMA(macdValues, signal);
+    for (let i = 0; i < sigValues.length; i++) {
+      signalArr[startIdx + i] = sigValues[i];
+    }
+    const hist = data.map((_, i) =>
+      macdLine[i] !== null && signalArr[i] !== null ? macdLine[i] - signalArr[i] : null
+    );
+    return { macdLine, signalArr, hist };
+  }
+
+  function calcBollinger(data, period = 20, stdDev = 2) {
+    const result = { upper: [], mid: [], lower: [], pctB: [] };
+    for (let i = 0; i < data.length; i++) {
+      if (i < period - 1) {
+        result.upper.push(null); result.mid.push(null);
+        result.lower.push(null); result.pctB.push(null);
+        continue;
+      }
+      const slice = data.slice(i - period + 1, i + 1);
+      const mean = slice.reduce((a, b) => a + b, 0) / period;
+      const variance = slice.reduce((a, b) => a + (b - mean) ** 2, 0) / period;
+      const std = Math.sqrt(variance);
+      const upper = mean + stdDev * std;
+      const lower = mean - stdDev * std;
+      result.upper.push(upper);
+      result.mid.push(mean);
+      result.lower.push(lower);
+      result.pctB.push((upper - lower) > 0 ? (data[i] - lower) / (upper - lower) * 100 : 50);
+    }
+    return result;
+  }
+
+  // ─── シグナル生成 ────────────────────────────
+
+  function getEMASignal(closes) {
+    const ema20 = calcEMA(closes, 20);
+    const ema50 = calcEMA(closes, 50);
+    const n = closes.length - 1;
+    const curr20 = ema20[n], curr50 = ema50[n];
+    const prev20 = ema20[n - 1], prev50 = ema50[n - 1];
+    let signal, detail;
+    if (prev20 <= prev50 && curr20 > curr50) {
+      signal = 'BUY'; detail = 'EMA20がEMA50を上抜け（ゴールデンクロス）';
+    } else if (prev20 >= prev50 && curr20 < curr50) {
+      signal = 'SELL'; detail = 'EMA20がEMA50を下抜け（デッドクロス）';
+    } else if (curr20 > curr50) {
+      signal = 'BUY'; detail = `EMA20(${fmt(curr20)}) > EMA50(${fmt(curr50)}) 上昇トレンド中`;
+    } else {
+      signal = 'SELL'; detail = `EMA20(${fmt(curr20)}) < EMA50(${fmt(curr50)}) 下降トレンド中`;
+    }
+    return { name: 'EMAクロス (20/50)', signal, value: `EMA20: ${fmt(curr20)} / EMA50: ${fmt(curr50)}`, detail };
+  }
+
+  function getRSISignal(closes) {
+    const rsi = calcRSI(closes, 14);
+    const n = closes.length - 1;
+    const val = rsi[n], prev = rsi[n - 1];
+    let signal, detail;
+    if (val < 30) { signal = 'BUY'; detail = `RSI ${val.toFixed(1)} → 売られ過ぎ圏（30以下）`; }
+    else if (val > 70) { signal = 'SELL'; detail = `RSI ${val.toFixed(1)} → 買われ過ぎ圏（70以上）`; }
+    else if (prev < 30 && val >= 30) { signal = 'BUY'; detail = `RSI ${val.toFixed(1)} → 売られ過ぎ圏から回復`; }
+    else if (prev > 70 && val <= 70) { signal = 'SELL'; detail = `RSI ${val.toFixed(1)} → 買われ過ぎ圏から下落`; }
+    else { signal = 'NEUTRAL'; detail = `RSI ${val.toFixed(1)} → 中立圏（30〜70）`; }
+    return { name: 'RSI (14)', signal, value: val.toFixed(1), detail };
+  }
+
+  function getMACDSignal(closes) {
+    const { macdLine, signalArr, hist } = calcMACD(closes);
+    const n = closes.length - 1;
+    const currM = macdLine[n], currS = signalArr[n];
+    const prevM = macdLine[n - 1], prevS = signalArr[n - 1];
+    const h = hist[n];
+    let signal, detail;
+    if (prevM !== null && prevS !== null && prevM <= prevS && currM > currS) {
+      signal = 'BUY'; detail = 'MACDがシグナルを上抜け（ゴールデンクロス）';
+    } else if (prevM !== null && prevS !== null && prevM >= prevS && currM < currS) {
+      signal = 'SELL'; detail = 'MACDがシグナルを下抜け（デッドクロス）';
+    } else if (currM > currS) {
+      signal = 'BUY'; detail = `MACD > Signal  ヒスト: ${h >= 0 ? '+' : ''}${h?.toFixed(1)}`;
+    } else {
+      signal = 'SELL'; detail = `MACD < Signal  ヒスト: ${h >= 0 ? '+' : ''}${h?.toFixed(1)}`;
+    }
+    return { name: 'MACD (12/26/9)', signal, value: `MACD: ${currM?.toFixed(1)} / Signal: ${currS?.toFixed(1)}`, detail };
+  }
+
+  function getBollingerSignal(closes) {
+    const bb = calcBollinger(closes, 20, 2);
+    const n = closes.length - 1;
+    const price = closes[n];
+    const upper = bb.upper[n], lower = bb.lower[n], mid = bb.mid[n];
+    const pctB = bb.pctB[n];
+    let signal, detail;
+    if (price <= lower) { signal = 'BUY'; detail = `価格が下限バンドに接触 (下限: ${fmt(lower)})`; }
+    else if (price >= upper) { signal = 'SELL'; detail = `価格が上限バンドに接触 (上限: ${fmt(upper)})`; }
+    else if (pctB < 30) { signal = 'BUY'; detail = `%B=${pctB.toFixed(1)} → バンド下部圏`; }
+    else if (pctB > 70) { signal = 'SELL'; detail = `%B=${pctB.toFixed(1)} → バンド上部圏`; }
+    else { signal = 'NEUTRAL'; detail = `%B=${pctB.toFixed(1)} → バンド中央付近`; }
+    return { name: 'ボリンジャーバンド (20/2σ)', signal, value: `上: ${fmt(upper)} / 中: ${fmt(mid)} / 下: ${fmt(lower)}`, detail };
+  }
+
+  function aggregateSignal(results) {
+    const buy = results.filter(r => r.signal === 'BUY').length;
+    const sell = results.filter(r => r.signal === 'SELL').length;
+    const total = results.length;
+    if (buy >= 3) return { signal: 'BUY', detail: `${buy >= total ? '強い' : 'やや'}買いシグナル (${buy}/${total}指標が買い)` };
+    if (sell >= 3) return { signal: 'SELL', detail: `${sell >= total ? '強い' : 'やや'}売りシグナル (${sell}/${total}指標が売り)` };
+    if (buy > sell) return { signal: 'BUY', detail: `弱い買いシグナル (${buy}買い / ${sell}売り)` };
+    if (sell > buy) return { signal: 'SELL', detail: `弱い売りシグナル (${sell}売り / ${buy}買い)` };
+    return { signal: 'NEUTRAL', detail: `中立 (${buy}買い / ${sell}売り)` };
+  }
+
+  // ─── フォーマット ─────────────────────────────
+  function fmt(v) { return v ? '$' + Math.round(v).toLocaleString() : '-'; }
+
+  // ─── データ取得 & 描画 ───────────────────────
+
+  async function loadData() {
+    clearTimeout(refreshTimer);
+    document.getElementById('last-update').textContent = '更新中...';
+
+    try {
+      const [klines, tickerPrice, ticker24h] = await Promise.all([
+        fetch(`${BASE}/api/v3/klines?symbol=${SYMBOL}&interval=${currentInterval}&limit=200`).then(r => r.json()),
+        fetch(`${BASE}/api/v3/ticker/price?symbol=${SYMBOL}`).then(r => r.json()),
+        fetch(`${BASE}/api/v3/ticker/24hr?symbol=${SYMBOL}`).then(r => r.json()),
+      ]);
+
+      const closes = klines.map(k => parseFloat(k[4]));
+      const price = parseFloat(tickerPrice.price);
+      const change = parseFloat(ticker24h.priceChangePercent);
+      const high24 = parseFloat(ticker24h.highPrice);
+      const low24 = parseFloat(ticker24h.lowPrice);
+      const volume = parseFloat(ticker24h.volume);
+
+      const results = [
+        getEMASignal(closes),
+        getRSISignal(closes),
+        getMACDSignal(closes),
+        getBollingerSignal(closes),
+      ];
+      const overall = aggregateSignal(results);
+
+      render(price, change, high24, low24, volume, results, overall);
+      document.getElementById('last-update').textContent =
+        '最終更新: ' + new Date().toLocaleTimeString('ja-JP');
+
+    } catch (e) {
+      document.getElementById('app').innerHTML =
+        `<div class="error-card">⚠️ データ取得エラー<br><small>${e.message}</small></div>`;
+    }
+
+    refreshTimer = setTimeout(loadData, REFRESH_SEC * 1000);
+  }
+
+  function render(price, change, high24, low24, volume, results, overall) {
+    const signalIcon = { BUY: '↑', SELL: '↓', NEUTRAL: '→' };
+    const signalLabel = { BUY: 'BUY', SELL: 'SELL', NEUTRAL: '中立' };
+    const changeColor = change >= 0 ? 'var(--green)' : 'var(--red)';
+    const changeSign = change >= 0 ? '+' : '';
+
+    const indicatorsHTML = results.map(r => `
+      <div class="indicator-card animate">
+        <div class="left">
+          <div class="name">${r.name}</div>
+          <div class="value">${r.value}</div>
+          <div class="detail">${r.detail}</div>
+        </div>
+        <span class="badge ${r.signal}">${signalIcon[r.signal]} ${signalLabel[r.signal]}</span>
+      </div>
+    `).join('');
+
+    const intervalLabels = { '15m': '15分', '1h': '1時間', '4h': '4時間', '1d': '日足' };
+
+    document.getElementById('app').innerHTML = `
+      <div class="interval-selector">
+        ${['15m','1h','4h','1d'].map(iv => `
+          <button class="interval-btn ${currentInterval === iv ? 'active' : ''}"
+            onclick="setInterval('${iv}')">${intervalLabels[iv]}</button>
+        `).join('')}
+      </div>
+
+      <div class="price-card animate">
+        <div class="label">BTC / USDT</div>
+        <div class="price">$${price.toLocaleString('ja-JP', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+        <div class="change" style="color:${changeColor}">${changeSign}${change.toFixed(2)}%</div>
+        <div class="stats">
+          <span><span>24h高値</span><b style="color:var(--green)">$${Math.round(high24).toLocaleString()}</b></span>
+          <span><span>24h安値</span><b style="color:var(--red)">$${Math.round(low24).toLocaleString()}</b></span>
+          <span><span>出来高</span><b>${Math.round(volume).toLocaleString()} BTC</b></span>
+        </div>
+      </div>
+
+      <div class="overall-card ${overall.signal} animate">
+        <div class="icon">${overall.signal === 'BUY' ? '🚀' : overall.signal === 'SELL' ? '📉' : '⚖️'}</div>
+        <div class="text">
+          <div class="title">${signalIcon[overall.signal]} ${signalLabel[overall.signal]}</div>
+          <div class="detail">${overall.detail}</div>
+        </div>
+      </div>
+
+      <div class="section-title">各指標の詳細</div>
+      <div class="indicator-grid">${indicatorsHTML}</div>
+
+      <div class="footer">Binance API ・ ${REFRESH_SEC}秒ごとに自動更新</div>
+    `;
+  }
+
+  function setInterval(iv) {
+    currentInterval = iv;
+    loadData();
+  }
+
+  // Service Worker 登録
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  loadData();
+  </script>
+</body>
+</html>
