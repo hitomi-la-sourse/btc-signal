@@ -31,21 +31,26 @@
     /* ── ヘッダー ── */
     header {
       background: var(--card); border-bottom: 1px solid var(--border);
-      padding: 12px 16px; display: flex; align-items: center;
-      justify-content: space-between; position: sticky; top: 0; z-index: 100;
+      padding: 12px 16px;
+      display: -webkit-flex; display: flex;
+      -webkit-align-items: center; align-items: center;
+      -webkit-justify-content: space-between; justify-content: space-between;
+      position: -webkit-sticky; position: sticky; top: 0; z-index: 100;
     }
     header h1 { font-size: 17px; font-weight: 700; }
     header .sub { font-size: 11px; color: var(--muted); }
-    .header-btns { display: flex; gap: 8px; }
+    .header-btns { display: -webkit-flex; display: flex; gap: 8px; }
 
     .icon-btn {
       background: var(--card); border: 1px solid var(--border);
-      color: var(--text); border-radius: 8px; padding: 6px 10px;
-      font-size: 18px; cursor: pointer; line-height: 1;
-      display: flex; align-items: center; justify-content: center;
+      color: var(--text); border-radius: 8px; padding: 6px 12px;
+      font-size: 13px; font-weight: 600; cursor: pointer; line-height: 1;
+      display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center;
+      -webkit-justify-content: center; justify-content: center; gap: 4px;
+      -webkit-tap-highlight-color: transparent;
     }
     .icon-btn:active { opacity: 0.6; }
-    .icon-btn.notify-on { background: rgba(31,111,235,0.2); border-color: var(--accent); }
+    .icon-btn.notify-on { background: rgba(31,111,235,0.2); border-color: var(--accent); color: var(--cyan); }
 
     .refresh-btn {
       background: var(--accent); color: white; border: none;
@@ -201,7 +206,7 @@
       <div class="sub" id="last-update">読み込み中...</div>
     </div>
     <div class="header-btns">
-      <button class="icon-btn" id="notify-btn" onclick="openNotifyModal()" title="通知設定">🔔</button>
+      <button class="icon-btn" id="notify-btn" onclick="openNotifyModal()">🔔 通知</button>
       <button class="refresh-btn" onclick="loadData()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="M1 4v6h6"/><path d="M23 20v-6h-6"/>

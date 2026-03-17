@@ -1,4 +1,4 @@
-const CACHE = 'btc-signal-v1';
+const CACHE = 'btc-signal-v3';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
