@@ -309,19 +309,26 @@
   }
 
   // ─── 通知送信 ────────────────────────────────────
+  function xhrPost(url, body) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url, true);
+      xhr.timeout = 10000;
+      xhr.onload = () => resolve(xhr.status);
+      xhr.onerror = () => reject(new Error('network error'));
+      xhr.ontimeout = () => reject(new Error('timeout'));
+      xhr.send(body);
+    });
+  }
+
   async function sendNtfy(signal, detail, price) {
     const topic = getOrCreateTopic();
     const emoji = signal === 'BUY' ? '🚀' : '📉';
-    const title = encodeURIComponent(`BTC ${signal === 'BUY' ? '買い' : '売り'}シグナル ${emoji}`);
+    const title = encodeURIComponent(`BTC ${signal === 'BUY' ? '買いシグナル' : '売りシグナル'} ${emoji}`);
     const tags  = signal === 'BUY' ? 'chart_with_upwards_trend' : 'chart_with_downwards_trend';
     const body  = `${detail}\n現在価格: $${Math.round(price).toLocaleString()}`;
     const url   = `${NTFY_BASE}/${topic}?title=${title}&priority=high&tags=${tags}`;
-
-    try {
-      await fetch(url, { method: 'POST', body: body, mode: 'no-cors' });
-    } catch (e) {
-      console.warn('ntfy send failed:', e);
-    }
+    try { await xhrPost(url, body); } catch(e) { console.warn('ntfy send failed:', e); }
   }
 
   // ─── シグナル変化チェック & 通知判定 ─────────────
@@ -588,7 +595,7 @@
     try {
       const title = encodeURIComponent('BTC Signal テスト通知');
       const url = `${NTFY_BASE}/${topic}?title=${title}&tags=white_check_mark`;
-      await fetch(url, { method: 'POST', body: 'ntfyの設定完了！強シグナル検知時にこのように通知が届きます。', mode: 'no-cors' });
+      await xhrPost(url, 'ntfyの設定完了！強シグナル検知時にこのように通知が届きます。');
       btn.textContent = '✓ 送信完了！iPhoneを確認してください';
     } catch(e) {
       btn.textContent = '⚠️ 送信失敗: ' + e.message;
