@@ -312,22 +312,13 @@
   async function sendNtfy(signal, detail, price) {
     const topic = getOrCreateTopic();
     const emoji = signal === 'BUY' ? '🚀' : '📉';
-    const title = `BTC ${signal === 'BUY' ? '買い' : '売り'}シグナル ${emoji}`;
-    const body = `${detail}\n現在価格: $${Math.round(price).toLocaleString()}`;
-    const priority = 'high';
-    const tags = signal === 'BUY' ? 'chart_with_upwards_trend,green_circle' : 'chart_with_downwards_trend,red_circle';
+    const title = encodeURIComponent(`BTC ${signal === 'BUY' ? '買い' : '売り'}シグナル ${emoji}`);
+    const tags  = signal === 'BUY' ? 'chart_with_upwards_trend' : 'chart_with_downwards_trend';
+    const body  = `${detail}\n現在価格: $${Math.round(price).toLocaleString()}`;
+    const url   = `${NTFY_BASE}/${topic}?title=${title}&priority=high&tags=${tags}`;
 
     try {
-      await fetch(`${NTFY_BASE}/${topic}`, {
-        method: 'POST',
-        headers: {
-          'Title': title,
-          'Priority': priority,
-          'Tags': tags,
-          'Content-Type': 'text/plain; charset=utf-8',
-        },
-        body: body,
-      });
+      await fetch(url, { method: 'POST', body: body });
     } catch (e) {
       console.warn('ntfy send failed:', e);
     }
@@ -595,16 +586,9 @@
     btn.textContent = '送信中...';
     btn.disabled = true;
     try {
-      await fetch(`${NTFY_BASE}/${topic}`, {
-        method: 'POST',
-        headers: {
-          'Title': 'BTC Signal テスト通知',
-          'Priority': 'default',
-          'Tags': 'white_check_mark',
-          'Content-Type': 'text/plain; charset=utf-8',
-        },
-        body: 'ntfy の設定が完了しました！強シグナル検知時にこのように通知が届きます。',
-      });
+      const title = encodeURIComponent('BTC Signal テスト通知 ✅');
+      const url = `${NTFY_BASE}/${topic}?title=${title}&tags=white_check_mark`;
+      await fetch(url, { method: 'POST', body: 'ntfy の設定が完了しました！強シグナル検知時にこのように通知が届きます。' });
       btn.textContent = '✓ 送信完了！iPhoneを確認してください';
     } catch(e) {
       btn.textContent = '⚠️ 送信失敗: ' + e.message;
