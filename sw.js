@@ -1,4 +1,4 @@
-const CACHE = 'btc-signal-v6';
+const CACHE = 'btc-signal-v7';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
@@ -14,8 +14,9 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Binance API はキャッシュしない
-  if (e.request.url.includes('binance.com')) return;
+  // GETリクエスト かつ 同一オリジンのみキャッシュ対象
+  if (e.request.method !== 'GET') return;
+  if (!e.request.url.startsWith(self.location.origin)) return;
   e.respondWith(
     caches.match(e.request).then(r => r || fetch(e.request))
   );
