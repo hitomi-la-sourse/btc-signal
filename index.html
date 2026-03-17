@@ -318,7 +318,7 @@
     const url   = `${NTFY_BASE}/${topic}?title=${title}&priority=high&tags=${tags}`;
 
     try {
-      await fetch(url, { method: 'POST', body: body });
+      await fetch(url, { method: 'POST', body: body, mode: 'no-cors' });
     } catch (e) {
       console.warn('ntfy send failed:', e);
     }
@@ -586,9 +586,9 @@
     btn.textContent = '送信中...';
     btn.disabled = true;
     try {
-      const title = encodeURIComponent('BTC Signal テスト通知 ✅');
+      const title = encodeURIComponent('BTC Signal テスト通知');
       const url = `${NTFY_BASE}/${topic}?title=${title}&tags=white_check_mark`;
-      await fetch(url, { method: 'POST', body: 'ntfy の設定が完了しました！強シグナル検知時にこのように通知が届きます。' });
+      await fetch(url, { method: 'POST', body: 'ntfyの設定完了！強シグナル検知時にこのように通知が届きます。', mode: 'no-cors' });
       btn.textContent = '✓ 送信完了！iPhoneを確認してください';
     } catch(e) {
       btn.textContent = '⚠️ 送信失敗: ' + e.message;
